@@ -4,11 +4,12 @@ import { motion } from 'motion/react';
 type NavbarProps = {
   cartCount: number;
   onNavigate: (sectionId: string, category?: string) => void;
+  onOpenAdmin: () => void;
   onOpenCart: () => void;
   onOpenSearch: () => void;
 };
 
-export default function Navbar({ cartCount, onNavigate, onOpenCart, onOpenSearch }: NavbarProps) {
+export default function Navbar({ cartCount, onNavigate, onOpenAdmin, onOpenCart, onOpenSearch }: NavbarProps) {
   const links = [
     { label: 'Shop', sectionId: 'best-sellers', category: 'All' },
     { label: 'Furniture', sectionId: 'best-sellers', category: 'All' },
@@ -43,6 +44,15 @@ export default function Navbar({ cartCount, onNavigate, onOpenCart, onOpenSearch
             </button>
           </li>
         ))}
+        <li>
+          <button
+            type="button"
+            onClick={onOpenAdmin}
+            className="hover:text-white transition-colors uppercase"
+          >
+            Admin
+          </button>
+        </li>
       </ul>
       
       <div className="flex items-center gap-4">

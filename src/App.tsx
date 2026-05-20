@@ -7,6 +7,7 @@ import { Minus, Plus, Search, ShoppingBag, X } from 'lucide-react';
 import { motion, useScroll, useSpring } from 'motion/react';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import Navbar from './components/Navbar';
+import AdminDashboard from './components/AdminDashboard';
 import Hero from './components/Hero';
 import WhySofa from './components/WhySofa';
 import Products from './components/Products';
@@ -57,6 +58,7 @@ export default function App() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [content, setContent] = useState<Content | null>(null);
   const [toast, setToast] = useState('');
+  const [isAdminOpen, setAdminOpen] = useState(() => window.location.hash === '#admin');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Product[]>([]);
   const [checkout, setCheckout] = useState({ name: '', email: '', phone: '', address: '' });
@@ -91,6 +93,15 @@ export default function App() {
   }, [sessionId]);
 
   useEffect(() => {
+    function handleHashChange() {
+      setAdminOpen(window.location.hash === '#admin');
+    }
+
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
+  useEffect(() => {
     if (!searchQuery.trim()) {
       setSearchResults([]);
       return;
@@ -113,12 +124,24 @@ export default function App() {
   }
 
   function navigateTo(id: string, category?: string) {
+    if (window.location.hash === '#admin') {
+      window.history.pushState('', document.title, window.location.pathname + window.location.search);
+    }
+
+    setAdminOpen(false);
+
     if (category) {
       setActiveCategory(category);
       setPage(1);
     }
 
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function openAdmin() {
+    window.location.hash = 'admin';
+    setAdminOpen(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   async function handleAddToCart(productId: string) {
@@ -188,42 +211,49 @@ export default function App() {
       <Navbar
         cartCount={cart.count}
         onNavigate={navigateTo}
+        onOpenAdmin={openAdmin}
         onOpenCart={() => setCartOpen(true)}
         onOpenSearch={() => setSearchOpen(true)}
       />
       
-      <main>
-        <Hero onStartShopping={() => navigateTo('best-sellers', 'All')} />
-        <WhySofa onReadFeature={(title, body) => setContent({ title, body })} />
-        <Products
-          activeCategory={activeCategory}
-          categories={categories}
-          isLoading={isProductsLoading}
-          page={page}
-          products={products}
-          totalPages={totalPages}
-          onCategoryChange={(category) => {
-            setActiveCategory(category);
-            setPage(1);
-          }}
-          onGoToShop={() => navigateTo('best-sellers', 'All')}
-          onNextPage={() => setPage((current) => (current >= totalPages ? 1 : current + 1))}
-          onPrevPage={() => setPage((current) => (current <= 1 ? totalPages : current - 1))}
-          onViewProduct={setSelectedProduct}
-        />
-        <Experience onSelectCategory={(category) => navigateTo('best-sellers', category)} />
-        <Stats onReadMore={() => openArticle('materials')} />
-        <News onReadMore={() => openArticle('grand-designs-2026')} />
-        <InteriorDesign onReadMore={() => openArticle('interior-design-service')} />
-        <MapSection />
-        <CTA onContact={() => navigateTo('contact')} />
-      </main>
-      
-      <Footer
-        onNavigate={navigateTo}
-        onOpenPage={openPage}
-        onSubscribeSuccess={showToast}
-      />
+      {isAdminOpen ? (
+        <AdminDashboard onBack={() => navigateTo('hero')} />
+      ) : (
+        <>
+          <main>
+            <Hero onStartShopping={() => navigateTo('best-sellers', 'All')} />
+            <WhySofa onReadFeature={(title, body) => setContent({ title, body })} />
+            <Products
+              activeCategory={activeCategory}
+              categories={categories}
+              isLoading={isProductsLoading}
+              page={page}
+              products={products}
+              totalPages={totalPages}
+              onCategoryChange={(category) => {
+                setActiveCategory(category);
+                setPage(1);
+              }}
+              onGoToShop={() => navigateTo('best-sellers', 'All')}
+              onNextPage={() => setPage((current) => (current >= totalPages ? 1 : current + 1))}
+              onPrevPage={() => setPage((current) => (current <= 1 ? totalPages : current - 1))}
+              onViewProduct={setSelectedProduct}
+            />
+            <Experience onSelectCategory={(category) => navigateTo('best-sellers', category)} />
+            <Stats onReadMore={() => openArticle('materials')} />
+            <News onReadMore={() => openArticle('grand-designs-2026')} />
+            <InteriorDesign onReadMore={() => openArticle('interior-design-service')} />
+            <MapSection />
+            <CTA onContact={() => navigateTo('contact')} />
+          </main>
+          
+          <Footer
+            onNavigate={navigateTo}
+            onOpenPage={openPage}
+            onSubscribeSuccess={showToast}
+          />
+        </>
+      )}
 
       {toast && (
         <div className="fixed bottom-6 left-1/2 z-[80] -translate-x-1/2 bg-white text-brand-dark px-5 py-3 text-sm font-semibold shadow-2xl">

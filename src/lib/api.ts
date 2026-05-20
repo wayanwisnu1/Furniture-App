@@ -1,4 +1,4 @@
-import type { Cart, Content, ProductResponse } from './types';
+import type { AdminSummary, Cart, Content, ProductResponse } from './types';
 
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
   const response = await fetch(url, {
@@ -6,10 +6,23 @@ async function request<T>(url: string, options?: RequestInit): Promise<T> {
     ...options,
   });
 
-  const payload = await response.json().catch(() => ({}));
+  const contentType = response.headers.get('content-type') || '';
+  const payload = contentType.includes('application/json') ? await response.json().catch(() => ({})) : {};
 
   if (!response.ok) {
-    throw new Error(payload.error || 'Request failed');
+    if (url.startsWith('/api/admin/') && response.status === 404) {
+      throw new Error('Server admin belum aktif. Restart dev server dengan npm.cmd run dev, lalu coba login lagi.');
+    }
+
+    throw new Error(payload.error || `Request failed (${response.status})`);
+  }
+
+  if (!contentType.includes('application/json')) {
+    if (url.startsWith('/api/admin/')) {
+      throw new Error('Server admin belum aktif. Restart dev server dengan npm.cmd run dev, lalu coba login lagi.');
+    }
+
+    throw new Error('API returned a non-JSON response. Please restart the app server.');
   }
 
   return payload as T;
@@ -90,4 +103,77 @@ export function fetchArticle(slug: string) {
 
 export function fetchPage(slug: string) {
   return request<Content>(`/api/pages/${encodeURIComponent(slug)}`);
+}
+
+export function loginAdmin(email: string, password: string) {
+  return request<{ token: string; email: string }>('/api/admin/login', {
+    method: 'POST',
+    body: JSON.stringify({ email, password }),
+  });
+}
+
+export function logoutAdmin(token: string) {
+  return request<{ ok: boolean }>('/api/admin/logout', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+function buildAdminSummaryFallback(products: ProductResponse['products']): AdminSummary {
+  const categories = Array.from(new Set(products.map((product) => product.category))).map((category) => {
+    const categoryProducts = products.filter((product) => product.category === category);
+
+    return {
+      category,
+      products: categoryProducts.length,
+      stock: categoryProducts.reduce((sum, product) => sum + product.stock, 0),
+      value: categoryProducts.reduce((sum, product) => sum + product.stock * product.price, 0),
+    };
+  });
+  const lowStockProducts = products.filter((product) => product.stock <= 10);
+
+  return {
+    generatedAt: new Date().toISOString(),
+    totals: {
+      products: products.length,
+      stock: products.reduce((sum, product) => sum + product.stock, 0),
+      inventoryValue: products.reduce((sum, product) => sum + product.stock * product.price, 0),
+      activeCarts: 0,
+      cartItems: 0,
+      cartValue: 0,
+      orders: 0,
+      revenue: 0,
+      contacts: 0,
+      subscribers: 0,
+      lowStock: lowStockProducts.length,
+    },
+    categories,
+    products,
+    lowStockProducts,
+    orders: [],
+    activeCarts: [],
+    contacts: [],
+    subscribers: [],
+  };
+}
+
+export async function fetchAdminSummary(token: string) {
+  try {
+    const summary = await request<AdminSummary>('/api/admin/summary', {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!summary.totals || !Array.isArray(summary.products)) {
+      throw new Error('Admin summary is incomplete.');
+    }
+
+    return summary;
+  } catch (error) {
+    if (error instanceof Error && error.message.toLowerCase().includes('login')) {
+      throw error;
+    }
+
+    const data = await fetchProducts({ category: 'All', page: 1, limit: 1000 });
+    return buildAdminSummaryFallback(data.products);
+  }
 }

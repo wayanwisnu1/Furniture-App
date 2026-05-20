@@ -1,4 +1,5 @@
 import express from 'express';
+import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createServer as createViteServer } from 'vite';
@@ -21,10 +22,33 @@ type CartLine = {
   quantity: number;
 };
 
+type Customer = {
+  name: string;
+  email: string;
+  phone: string;
+  address: string;
+};
+
+type Order = {
+  id: string;
+  customer: Customer;
+  cart: ReturnType<typeof getCart>;
+  createdAt: string;
+};
+
+type Contact = {
+  name: string;
+  email: string;
+  message: string;
+  createdAt: string;
+};
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 const port = Number(process.env.PORT || 3000);
 const isProduction = process.env.NODE_ENV === 'production';
+const adminEmail = process.env.ADMIN_EMAIL || 'admin@sofnu.com';
+const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
 
 const products: Product[] = [
   {
@@ -101,11 +125,24 @@ const products: Product[] = [
 ];
 
 const carts = new Map<string, CartLine[]>();
-const contacts: unknown[] = [];
+const contacts: Contact[] = [];
 const subscribers = new Set<string>();
-const orders: unknown[] = [];
+const orders: Order[] = [];
+const adminSessions = new Set<string>();
 
 app.use(express.json());
+
+function requireAdmin(req: express.Request, res: express.Response, next: express.NextFunction) {
+  const header = req.headers.authorization || '';
+  const token = header.startsWith('Bearer ') ? header.slice('Bearer '.length) : '';
+
+  if (!token || !adminSessions.has(token)) {
+    res.status(401).json({ error: 'Admin login required.' });
+    return;
+  }
+
+  next();
+}
 
 function getCart(sessionId: string) {
   if (!carts.has(sessionId)) {
@@ -162,6 +199,67 @@ app.get('/api/products/:id', (req, res) => {
   }
 
   res.json({ product });
+});
+
+app.post('/api/admin/login', (req, res) => {
+  const email = String(req.body.email || '').trim().toLowerCase();
+  const password = String(req.body.password || '');
+
+  if (email !== adminEmail.toLowerCase() || password !== adminPassword) {
+    res.status(401).json({ error: 'Email atau password admin salah.' });
+    return;
+  }
+
+  const token = randomUUID();
+  adminSessions.add(token);
+  res.status(201).json({ token, email: adminEmail });
+});
+
+app.post('/api/admin/logout', requireAdmin, (req, res) => {
+  const header = req.headers.authorization || '';
+  adminSessions.delete(header.slice('Bearer '.length));
+  res.json({ ok: true });
+});
+
+app.get('/api/admin/summary', requireAdmin, (_req, res) => {
+  const activeCarts = Array.from(carts.entries())
+    .map(([sessionId]) => ({ sessionId, ...getCart(sessionId) }))
+    .filter((cart) => cart.count > 0);
+  const categories = Array.from(new Set(products.map((product) => product.category))).map((category) => {
+    const categoryProducts = products.filter((product) => product.category === category);
+
+    return {
+      category,
+      products: categoryProducts.length,
+      stock: categoryProducts.reduce((sum, product) => sum + product.stock, 0),
+      value: categoryProducts.reduce((sum, product) => sum + product.stock * product.price, 0),
+    };
+  });
+  const lowStockProducts = products.filter((product) => product.stock <= 10);
+
+  res.json({
+    generatedAt: new Date().toISOString(),
+    totals: {
+      products: products.length,
+      stock: products.reduce((sum, product) => sum + product.stock, 0),
+      inventoryValue: products.reduce((sum, product) => sum + product.stock * product.price, 0),
+      activeCarts: activeCarts.length,
+      cartItems: activeCarts.reduce((sum, cart) => sum + cart.count, 0),
+      cartValue: activeCarts.reduce((sum, cart) => sum + cart.total, 0),
+      orders: orders.length,
+      revenue: orders.reduce((sum, order) => sum + order.cart.total, 0),
+      contacts: contacts.length,
+      subscribers: subscribers.size,
+      lowStock: lowStockProducts.length,
+    },
+    categories,
+    products,
+    lowStockProducts,
+    orders: orders.slice().reverse(),
+    activeCarts,
+    contacts: contacts.slice().reverse(),
+    subscribers: Array.from(subscribers).sort(),
+  });
 });
 
 app.get('/api/cart/:sessionId', (req, res) => {
