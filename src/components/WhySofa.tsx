@@ -37,7 +37,7 @@ export default function WhySofa({ onReadFeature }: WhySofaProps) {
             whileInView={{ x: 0, opacity: 1 }}
             className="text-6xl md:text-7xl font-display font-medium mb-4"
           >
-            Why<br />Sofa
+            Why<br />Sofnu
           </motion.h2>
           <p className="text-white/40 text-lg">Interior Modern sofas are designed to bring comfort, elegance, and durability into your space. Made with premium materials and a modern aesthetic, each sofa is crafted to enhance your interior while providing long-lasting quality and everyday comfort. A perfect choice for creating a stylish and welcoming living space.
 .</p>

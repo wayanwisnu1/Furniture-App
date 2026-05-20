@@ -33,7 +33,7 @@ export default function News({ onReadMore }: NewsProps) {
           </motion.h2>
           
           <p className="text-white/40 text-sm leading-relaxed mb-12 max-w-sm">
-            We're proud to announce Sofa as the Official House Furniture Partner for Grand Designs Live 2026. Furnishing the show's featured house, Cult brings bold design, considered function and distinctive personality to one of the UK's most iconic design destinations. Discover how we're bringing modern living to life and explore what's to come.
+            We're proud to announce Sofnu as the Official House Furniture Partner for Grand Designs Live 2026. Furnishing the show's featured house, Cult brings bold design, considered function and distinctive personality to one of the UK's most iconic design destinations. Discover how we're bringing modern living to life and explore what's to come.
           </p>
           
           <button type="button" onClick={onReadMore} className="px-10 py-4 border border-white/30 text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-white hover:text-brand-dark transition-all flex items-center gap-4 group">

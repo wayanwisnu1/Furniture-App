@@ -28,7 +28,7 @@ export default function Navbar({ cartCount, onNavigate, onOpenCart, onOpenSearch
         onClick={() => onNavigate('hero')}
         className="text-2xl font-bold tracking-tighter font-display uppercase italic"
       >
-        sofa
+        sofnu.
       </button>
       
       <ul className="hidden md:flex items-center gap-8 text-sm font-medium text-white/70">

@@ -32,10 +32,10 @@ export default function Footer({ onNavigate, onOpenPage, onSubscribeSuccess }: F
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 mb-24">
         <div>
           <button type="button" onClick={() => onNavigate?.('hero')} className="text-6xl font-bold font-display uppercase italic mb-8">
-            sofa
+            sofnu
           </button>
           <p className="text-white/40 text-sm mb-8 max-w-sm">
-            Subscribe for the best of SOFA - new drops, styling tips and all the things worth knowing.
+            Subscribe for the best of SOFNU - new drops, styling tips and all the things worth knowing.
           </p>
           
           <form onSubmit={handleSubscribe} className="flex max-w-md gap-4">
@@ -66,9 +66,9 @@ export default function Footer({ onNavigate, onOpenPage, onSubscribeSuccess }: F
           <div>
             <h4 className="text-xs font-bold uppercase tracking-[0.2em] mb-6">Follow Us</h4>
             <ul className="space-y-4 text-white/50 text-sm">
-              <li><a className="flex items-center gap-2 hover:text-white transition-colors" href="https://facebook.com" target="_blank" rel="noreferrer"><Facebook size={14} /> Facebook</a></li>
+              <li><a className="flex items-center gap-2 hover:text-white transition-colors" href="https://www.facebook.com/profile.php?id=100017906700003&locale=id_ID" target="_blank" rel="noreferrer"><Facebook size={14} /> Facebook</a></li>
               <li><a className="flex items-center gap-2 hover:text-white transition-colors" href="https://twitter.com" target="_blank" rel="noreferrer"><Twitter size={14} /> Twitter</a></li>
-              <li><a className="flex items-center gap-2 hover:text-white transition-colors" href="https://instagram.com" target="_blank" rel="noreferrer"><Instagram size={14} /> Instagram</a></li>
+              <li><a className="flex items-center gap-2 hover:text-white transition-colors" href="https://www.instagram.com/wayanwisnuu/" target="_blank" rel="noreferrer"><Instagram size={14} /> Instagram</a></li>
             </ul>
           </div>
           
@@ -84,7 +84,7 @@ export default function Footer({ onNavigate, onOpenPage, onSubscribeSuccess }: F
       </div>
       
       <div className="flex flex-col md:flex-row justify-between items-center pt-8 border-t border-white/5 gap-4">
-        <div className="text-white/20 text-[10px] uppercase tracking-widest">&copy; 2026 SOFA FURNITURE. ALL RIGHTS RESERVED.</div>
+        <div className="text-white/20 text-[10px] uppercase tracking-widest">&copy; 2026 SOFNU FURNITURE. ALL RIGHTS RESERVED.</div>
         <div className="flex gap-8 text-white/20 text-[10px] uppercase tracking-widest">
           <button type="button" onClick={() => onOpenPage?.('terms')} className="hover:text-white transition-colors">Terms & Conditions</button>
           <button type="button" onClick={() => onOpenPage?.('privacy')} className="hover:text-white transition-colors">Privacy Policy</button>
