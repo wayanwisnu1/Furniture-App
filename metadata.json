@@ -1,0 +1,6 @@
+{
+  "name": "Sofa - Modern Furniture Store",
+  "description": "A premium landing page for a modern furniture store featuring curated collections, design services, and interactive location maps.",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
