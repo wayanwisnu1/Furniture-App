@@ -39,7 +39,8 @@ export default function WhySofa({ onReadFeature }: WhySofaProps) {
           >
             Why<br />Sofa
           </motion.h2>
-          <p className="text-white/40 text-lg">The areas that we are specialized in.</p>
+          <p className="text-white/40 text-lg">Interior Modern sofas are designed to bring comfort, elegance, and durability into your space. Made with premium materials and a modern aesthetic, each sofa is crafted to enhance your interior while providing long-lasting quality and everyday comfort. A perfect choice for creating a stylish and welcoming living space.
+.</p>
           
           <div className="mt-12 text-6xl font-display text-white/5 opacity-20">{'{?}'}</div>
         </div>
