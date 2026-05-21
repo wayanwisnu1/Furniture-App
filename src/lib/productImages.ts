@@ -12,7 +12,11 @@ const images: Record<Product['imageKey'], string> = {
   sofa: sofaImage,
 };
 
-export function productImage(product: Pick<Product, 'imageKey'> & Partial<Pick<Product, 'id'>>) {
+export function productImage(product: Pick<Product, 'imageKey'> & Partial<Pick<Product, 'id' | 'imageUrl'>>) {
+  if (product.imageUrl) {
+    return product.imageUrl;
+  }
+
   if (product.id === 'karoas-lamp') {
     return karoasLampImage;
   }

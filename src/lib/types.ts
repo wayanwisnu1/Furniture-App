@@ -5,6 +5,7 @@ export type Product = {
   category: string;
   badge?: string;
   imageKey: 'lamp' | 'chair' | 'sofa';
+  imageUrl?: string;
   colors: string[];
   description: string;
   stock: number;

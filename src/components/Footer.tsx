@@ -5,7 +5,7 @@ import { subscribeNewsletter } from '../lib/api';
 type FooterProps = {
   onNavigate?: (sectionId: string, category?: string) => void;
   onOpenPage?: (slug: string) => void;
-  onSubscribeSuccess?: (message: string) => void;
+  onSubscribeSuccess?: (message: string, type?: 'success' | 'error' | 'info') => void;
 };
 
 export default function Footer({ onNavigate, onOpenPage, onSubscribeSuccess }: FooterProps) {
@@ -19,9 +19,9 @@ export default function Footer({ onNavigate, onOpenPage, onSubscribeSuccess }: F
     try {
       const result = await subscribeNewsletter(email);
       setEmail('');
-      onSubscribeSuccess?.(result.message);
+      onSubscribeSuccess?.(result.message, 'success');
     } catch (error) {
-      onSubscribeSuccess?.(error instanceof Error ? error.message : 'Unable to subscribe.');
+      onSubscribeSuccess?.(error instanceof Error ? error.message : 'Unable to subscribe.', 'error');
     } finally {
       setIsSubmitting(false);
     }

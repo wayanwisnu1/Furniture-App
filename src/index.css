@@ -18,3 +18,27 @@
 .markdown-body {
   @apply text-white/80 leading-relaxed;
 }
+
+.sofnu-swal-popup {
+  border: 1px solid rgb(255 255 255 / 0.1) !important;
+  border-radius: 6px !important;
+  box-shadow: 0 24px 80px rgb(0 0 0 / 0.55) !important;
+}
+
+.sofnu-swal-confirm,
+.sofnu-swal-cancel {
+  border-radius: 2px !important;
+  padding: 0.75rem 1.2rem !important;
+  font-size: 0.75rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.14em !important;
+  text-transform: uppercase !important;
+}
+
+.sofnu-swal-confirm {
+  color: #0a0a0a !important;
+}
+
+.sofnu-swal-cancel {
+  color: #ffffff !important;
+}

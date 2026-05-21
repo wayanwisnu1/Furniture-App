@@ -11,6 +11,7 @@ type Product = {
   category: string;
   badge?: string;
   imageKey: string;
+  imageUrl?: string;
   colors: string[];
   description: string;
   stock: number;
@@ -50,7 +51,7 @@ const isProduction = process.env.NODE_ENV === 'production';
 const adminEmail = process.env.ADMIN_EMAIL || 'admin@sofnu.com';
 const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
 
-const products: Product[] = [
+let products: Product[] = [
   {
     id: 'sakarias-lamp',
     name: 'Sakarias Lamp',
@@ -130,7 +131,7 @@ const subscribers = new Set<string>();
 const orders: Order[] = [];
 const adminSessions = new Set<string>();
 
-app.use(express.json());
+app.use(express.json({ limit: '15mb' }));
 
 function requireAdmin(req: express.Request, res: express.Response, next: express.NextFunction) {
   const header = req.headers.authorization || '';
@@ -142,6 +143,101 @@ function requireAdmin(req: express.Request, res: express.Response, next: express
   }
 
   next();
+}
+
+function productCategories() {
+  return [...Array.from(new Set(products.map((product) => product.category))), 'All'];
+}
+
+function slugify(value: string) {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+function uniqueProductId(name: string) {
+  const base = slugify(name) || `product-${Date.now()}`;
+  let id = base;
+  let index = 2;
+
+  while (products.some((product) => product.id === id)) {
+    id = `${base}-${index}`;
+    index += 1;
+  }
+
+  return id;
+}
+
+function productFromBody(body: Record<string, unknown>, existing?: Product): Product | { error: string } {
+  const name = String(body.name ?? existing?.name ?? '').trim();
+  const category = String(body.category ?? existing?.category ?? '').trim();
+  const imageKey = String(body.imageKey ?? existing?.imageKey ?? 'sofa').trim();
+  const imageUrl = String(body.imageUrl ?? existing?.imageUrl ?? '').trim();
+  const description = String(body.description ?? existing?.description ?? '').trim();
+  const badge = String(body.badge ?? existing?.badge ?? '').trim();
+  const price = Number(body.price ?? existing?.price);
+  const stock = Number(body.stock ?? existing?.stock);
+  const rating = Number(body.rating ?? existing?.rating ?? 4.5);
+  const colors = Array.isArray(body.colors)
+    ? body.colors.map((color) => String(color).trim()).filter(Boolean)
+    : String(body.colors ?? existing?.colors.join(',') ?? '#f4f1ea,#1f1f1f,#9c7b55')
+      .split(',')
+      .map((color) => color.trim())
+      .filter(Boolean);
+
+  if (!name || !category || !description) {
+    return { error: 'Name, category, and description are required.' };
+  }
+
+  if (!['lamp', 'chair', 'sofa'].includes(imageKey)) {
+    return { error: 'Image type must be lamp, chair, or sofa.' };
+  }
+
+  if (!Number.isFinite(price) || price < 0) {
+    return { error: 'Price must be a number greater than or equal to 0.' };
+  }
+
+  if (!Number.isFinite(stock) || stock < 0) {
+    return { error: 'Stock must be a number greater than or equal to 0.' };
+  }
+
+  if (!Number.isFinite(rating) || rating < 0 || rating > 5) {
+    return { error: 'Rating must be between 0 and 5.' };
+  }
+
+  return {
+    id: existing?.id || uniqueProductId(name),
+    name,
+    price: Math.round(price),
+    category,
+    badge: badge || undefined,
+    imageKey,
+    imageUrl: imageUrl || undefined,
+    colors: colors.length ? colors.slice(0, 4) : ['#f4f1ea', '#1f1f1f', '#9c7b55'],
+    description,
+    stock: Math.floor(stock),
+    rating: Number(rating.toFixed(1)),
+  };
+}
+
+function removeProductFromCarts(productId: string) {
+  for (const [sessionId, cart] of carts.entries()) {
+    carts.set(
+      sessionId,
+      cart.filter((line) => line.productId !== productId),
+    );
+  }
+}
+
+function clampProductQuantityInCarts(productId: string, stock: number) {
+  for (const [sessionId, cart] of carts.entries()) {
+    const nextCart = cart
+      .map((line) => (line.productId === productId ? { ...line, quantity: Math.min(line.quantity, stock) } : line))
+      .filter((line) => line.quantity > 0);
+    carts.set(sessionId, nextCart);
+  }
 }
 
 function getCart(sessionId: string) {
@@ -187,7 +283,7 @@ app.get('/api/products', (req, res) => {
     total: filtered.length,
     page,
     limit,
-    categories: ['Chair', 'Lamp', 'Beds', 'Table', 'All'],
+    categories: productCategories(),
   });
 });
 
@@ -260,6 +356,90 @@ app.get('/api/admin/summary', requireAdmin, (_req, res) => {
     contacts: contacts.slice().reverse(),
     subscribers: Array.from(subscribers).sort(),
   });
+});
+
+app.post('/api/admin/products', requireAdmin, (req, res) => {
+  const product = productFromBody(req.body);
+
+  if ('error' in product) {
+    res.status(400).json({ error: product.error });
+    return;
+  }
+
+  products.push(product);
+  res.status(201).json({ product });
+});
+
+app.put('/api/admin/products/:id', requireAdmin, (req, res) => {
+  const current = products.find((item) => item.id === req.params.id);
+
+  if (!current) {
+    res.status(404).json({ error: 'Product not found.' });
+    return;
+  }
+
+  const product = productFromBody(req.body, current);
+
+  if ('error' in product) {
+    res.status(400).json({ error: product.error });
+    return;
+  }
+
+  products = products.map((item) => (item.id === current.id ? product : item));
+  clampProductQuantityInCarts(product.id, product.stock);
+  res.json({ product });
+});
+
+app.patch('/api/admin/products/:id/stock', requireAdmin, (req, res) => {
+  const product = products.find((item) => item.id === req.params.id);
+
+  if (!product) {
+    res.status(404).json({ error: 'Product not found.' });
+    return;
+  }
+
+  const stock = Number(req.body.stock);
+
+  if (!Number.isFinite(stock) || stock < 0) {
+    res.status(400).json({ error: 'Stock must be a number greater than or equal to 0.' });
+    return;
+  }
+
+  product.stock = Math.floor(stock);
+  clampProductQuantityInCarts(product.id, product.stock);
+  res.json({ product });
+});
+
+app.post('/api/admin/products/:id/stock/add', requireAdmin, (req, res) => {
+  const product = products.find((item) => item.id === req.params.id);
+
+  if (!product) {
+    res.status(404).json({ error: 'Product not found.' });
+    return;
+  }
+
+  const quantity = Number(req.body.quantity);
+
+  if (!Number.isFinite(quantity) || quantity <= 0) {
+    res.status(400).json({ error: 'Quantity must be greater than 0.' });
+    return;
+  }
+
+  product.stock += Math.floor(quantity);
+  res.json({ product });
+});
+
+app.delete('/api/admin/products/:id', requireAdmin, (req, res) => {
+  const product = products.find((item) => item.id === req.params.id);
+
+  if (!product) {
+    res.status(404).json({ error: 'Product not found.' });
+    return;
+  }
+
+  products = products.filter((item) => item.id !== product.id);
+  removeProductFromCarts(product.id);
+  res.json({ ok: true, product });
 });
 
 app.get('/api/cart/:sessionId', (req, res) => {

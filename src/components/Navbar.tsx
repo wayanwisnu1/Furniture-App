@@ -3,15 +3,15 @@ import { motion } from 'motion/react';
 
 type NavbarProps = {
   cartCount: number;
+  isAdmin?: boolean;
   onNavigate: (sectionId: string, category?: string) => void;
-  onOpenAdmin: () => void;
   onOpenCart: () => void;
   onOpenSearch: () => void;
+  onOpenShop: () => void;
 };
 
-export default function Navbar({ cartCount, onNavigate, onOpenAdmin, onOpenCart, onOpenSearch }: NavbarProps) {
+export default function Navbar({ cartCount, isAdmin = false, onNavigate, onOpenCart, onOpenSearch, onOpenShop }: NavbarProps) {
   const links = [
-    { label: 'Shop', sectionId: 'best-sellers', category: 'All' },
     { label: 'Furniture', sectionId: 'best-sellers', category: 'All' },
     { label: 'About Us', sectionId: 'why-sofa' },
     { label: 'Blog', sectionId: 'news' },
@@ -31,8 +31,19 @@ export default function Navbar({ cartCount, onNavigate, onOpenAdmin, onOpenCart,
       >
         sofnu.
       </button>
+
+      {isAdmin && <div />}
       
-      <ul className="hidden md:flex items-center gap-8 text-sm font-medium text-white/70">
+      {!isAdmin && <ul className="hidden md:flex items-center gap-8 text-sm font-medium text-white/70">
+        <li>
+          <button
+            type="button"
+            onClick={onOpenShop}
+            className="hover:text-white transition-colors uppercase"
+          >
+            Shop
+          </button>
+        </li>
         {links.map((link) => (
           <li key={link.label}>
             <button
@@ -44,18 +55,9 @@ export default function Navbar({ cartCount, onNavigate, onOpenAdmin, onOpenCart,
             </button>
           </li>
         ))}
-        <li>
-          <button
-            type="button"
-            onClick={onOpenAdmin}
-            className="hover:text-white transition-colors uppercase"
-          >
-            Admin
-          </button>
-        </li>
-      </ul>
+      </ul>}
       
-      <div className="flex items-center gap-4">
+      {!isAdmin && <div className="flex items-center gap-4">
         <button
           type="button"
           onClick={onOpenSearch}
@@ -79,7 +81,7 @@ export default function Navbar({ cartCount, onNavigate, onOpenAdmin, onOpenCart,
             </span>
           )}
         </button>
-      </div>
+      </div>}
     </motion.nav>
   );
 }

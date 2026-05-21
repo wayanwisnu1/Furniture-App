@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { submitContact } from '../lib/api';
+import { showErrorAlert, showSuccessAlert } from '../lib/alerts';
 
 export default function MapSection() {
   const [formData, setFormData] = useState({ name: '', email: '', message: '' });
-  const [status, setStatus] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -12,13 +12,12 @@ export default function MapSection() {
 
     try {
       const result = await submitContact(formData);
-      setStatus(result.message);
       setFormData({ name: '', email: '', message: '' });
+      showSuccessAlert(result.message);
     } catch (error) {
-      setStatus(error instanceof Error ? error.message : 'Message failed.');
+      showErrorAlert(error instanceof Error ? error.message : 'Message failed.');
     } finally {
       setIsSubmitting(false);
-      window.setTimeout(() => setStatus(''), 3000);
     }
   };
 
@@ -63,7 +62,7 @@ export default function MapSection() {
               disabled={isSubmitting}
               className="w-full bg-brand-cream text-brand-dark font-bold py-4 rounded-sm hover:bg-white transition-colors uppercase tracking-[0.2em] disabled:opacity-60"
             >
-              {isSubmitting ? 'Sending...' : status || 'Send Message'}
+              {isSubmitting ? 'Sending...' : 'Send Message'}
             </button>
           </form>
         </div>

@@ -11,6 +11,7 @@ import AdminDashboard from './components/AdminDashboard';
 import Hero from './components/Hero';
 import WhySofa from './components/WhySofa';
 import Products from './components/Products';
+import ShopPage from './components/ShopPage';
 import Experience from './components/Experience';
 import Stats from './components/Stats';
 import News from './components/News';
@@ -29,6 +30,7 @@ import {
   submitOrder,
   updateCartItem,
 } from './lib/api';
+import { showErrorAlert, showInfoAlert, showSuccessAlert } from './lib/alerts';
 import { productImage } from './lib/productImages';
 import type { Cart, Content, Product } from './lib/types';
 
@@ -57,8 +59,8 @@ export default function App() {
   const [isCartOpen, setCartOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [content, setContent] = useState<Content | null>(null);
-  const [toast, setToast] = useState('');
   const [isAdminOpen, setAdminOpen] = useState(() => window.location.hash === '#admin');
+  const [isShopOpen, setShopOpen] = useState(() => window.location.hash === '#shop');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Product[]>([]);
   const [checkout, setCheckout] = useState({ name: '', email: '', phone: '', address: '' });
@@ -76,7 +78,7 @@ export default function App() {
         setCategories(data.categories);
         setTotalProducts(data.total);
       })
-      .catch((error) => showToast(error.message))
+      .catch((error) => showToast(error.message, 'error'))
       .finally(() => {
         if (!ignore) setIsProductsLoading(false);
       });
@@ -89,12 +91,13 @@ export default function App() {
   useEffect(() => {
     fetchCart(sessionId)
       .then(setCart)
-      .catch((error) => showToast(error.message));
+      .catch((error) => showToast(error.message, 'error'));
   }, [sessionId]);
 
   useEffect(() => {
     function handleHashChange() {
       setAdminOpen(window.location.hash === '#admin');
+      setShopOpen(window.location.hash === '#shop');
     }
 
     window.addEventListener('hashchange', handleHashChange);
@@ -110,7 +113,7 @@ export default function App() {
     const timer = window.setTimeout(() => {
       fetchProducts({ q: searchQuery, limit: 8 })
         .then((data) => setSearchResults(data.products))
-        .catch((error) => showToast(error.message));
+        .catch((error) => showToast(error.message, 'error'));
     }, 250);
 
     return () => window.clearTimeout(timer);
@@ -118,17 +121,27 @@ export default function App() {
 
   const featuredSearch = useMemo(() => (searchQuery.trim() ? searchResults : products), [products, searchQuery, searchResults]);
 
-  function showToast(message: string) {
-    setToast(message);
-    window.setTimeout(() => setToast(''), 3000);
+  function showToast(message: string, type: 'success' | 'error' | 'info' = 'info') {
+    if (type === 'success') {
+      showSuccessAlert(message);
+      return;
+    }
+
+    if (type === 'error') {
+      showErrorAlert(message);
+      return;
+    }
+
+    showInfoAlert(message);
   }
 
   function navigateTo(id: string, category?: string) {
-    if (window.location.hash === '#admin') {
+    if (window.location.hash === '#admin' || window.location.hash === '#shop') {
       window.history.pushState('', document.title, window.location.pathname + window.location.search);
     }
 
     setAdminOpen(false);
+    setShopOpen(false);
 
     if (category) {
       setActiveCategory(category);
@@ -138,20 +151,21 @@ export default function App() {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
-  function openAdmin() {
-    window.location.hash = 'admin';
-    setAdminOpen(true);
+  function openShop() {
+    window.location.hash = 'shop';
+    setShopOpen(true);
+    setAdminOpen(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  async function handleAddToCart(productId: string) {
+  async function handleAddToCart(productId: string, quantity = 1) {
     try {
-      const nextCart = await addCartItem(sessionId, productId);
+      const nextCart = await addCartItem(sessionId, productId, quantity);
       setCart(nextCart);
       setCartOpen(true);
-      showToast('Product added to cart.');
+      showToast(`${quantity} product${quantity > 1 ? 's' : ''} added to cart.`, 'success');
     } catch (error) {
-      showToast(error instanceof Error ? error.message : 'Unable to add item.');
+      showToast(error instanceof Error ? error.message : 'Unable to add item.', 'error');
     }
   }
 
@@ -159,7 +173,7 @@ export default function App() {
     try {
       setCart(await updateCartItem(sessionId, productId, quantity));
     } catch (error) {
-      showToast(error instanceof Error ? error.message : 'Unable to update item.');
+      showToast(error instanceof Error ? error.message : 'Unable to update item.', 'error');
     }
   }
 
@@ -167,7 +181,7 @@ export default function App() {
     try {
       setCart(await removeCartItem(sessionId, productId));
     } catch (error) {
-      showToast(error instanceof Error ? error.message : 'Unable to remove item.');
+      showToast(error instanceof Error ? error.message : 'Unable to remove item.', 'error');
     }
   }
 
@@ -175,7 +189,7 @@ export default function App() {
     try {
       setContent(await fetchArticle(slug));
     } catch (error) {
-      showToast(error instanceof Error ? error.message : 'Unable to load content.');
+      showToast(error instanceof Error ? error.message : 'Unable to load content.', 'error');
     }
   }
 
@@ -183,7 +197,7 @@ export default function App() {
     try {
       setContent(await fetchPage(slug));
     } catch (error) {
-      showToast(error instanceof Error ? error.message : 'Unable to load page.');
+      showToast(error instanceof Error ? error.message : 'Unable to load page.', 'error');
     }
   }
 
@@ -194,9 +208,9 @@ export default function App() {
       const result = await submitOrder(sessionId, checkout);
       setCart(emptyCart);
       setCheckout({ name: '', email: '', phone: '', address: '' });
-      showToast(`Order ${result.order.id} created.`);
+      showToast(`Order ${result.order.id} created.`, 'success');
     } catch (error) {
-      showToast(error instanceof Error ? error.message : 'Checkout failed.');
+      showToast(error instanceof Error ? error.message : 'Checkout failed.', 'error');
     }
   }
 
@@ -210,14 +224,21 @@ export default function App() {
 
       <Navbar
         cartCount={cart.count}
+        isAdmin={isAdminOpen}
         onNavigate={navigateTo}
-        onOpenAdmin={openAdmin}
         onOpenCart={() => setCartOpen(true)}
         onOpenSearch={() => setSearchOpen(true)}
+        onOpenShop={openShop}
       />
       
       {isAdminOpen ? (
         <AdminDashboard onBack={() => navigateTo('hero')} />
+      ) : isShopOpen ? (
+        <ShopPage
+          onAddToCart={handleAddToCart}
+          onBack={() => navigateTo('hero')}
+          onViewProduct={setSelectedProduct}
+        />
       ) : (
         <>
           <main>
@@ -234,7 +255,7 @@ export default function App() {
                 setActiveCategory(category);
                 setPage(1);
               }}
-              onGoToShop={() => navigateTo('best-sellers', 'All')}
+              onGoToShop={openShop}
               onNextPage={() => setPage((current) => (current >= totalPages ? 1 : current + 1))}
               onPrevPage={() => setPage((current) => (current <= 1 ? totalPages : current - 1))}
               onViewProduct={setSelectedProduct}
@@ -253,12 +274,6 @@ export default function App() {
             onSubscribeSuccess={showToast}
           />
         </>
-      )}
-
-      {toast && (
-        <div className="fixed bottom-6 left-1/2 z-[80] -translate-x-1/2 bg-white text-brand-dark px-5 py-3 text-sm font-semibold shadow-2xl">
-          {toast}
-        </div>
       )}
 
       {isSearchOpen && (

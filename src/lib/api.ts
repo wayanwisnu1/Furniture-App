@@ -1,9 +1,24 @@
-import type { AdminSummary, Cart, Content, ProductResponse } from './types';
+import type { AdminSummary, Cart, Content, Product, ProductResponse } from './types';
+
+export type AdminProductPayload = {
+  name: string;
+  price: number;
+  category: string;
+  badge?: string;
+  imageKey: Product['imageKey'];
+  imageUrl?: string;
+  colors: string[];
+  description: string;
+  stock: number;
+  rating: number;
+};
 
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
+  const headers = options?.headers ? Object.fromEntries(new Headers(options.headers).entries()) : {};
+
   const response = await fetch(url, {
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
     ...options,
+    headers: { 'Content-Type': 'application/json', ...headers },
   });
 
   const contentType = response.headers.get('content-type') || '';
@@ -115,6 +130,45 @@ export function loginAdmin(email: string, password: string) {
 export function logoutAdmin(token: string) {
   return request<{ ok: boolean }>('/api/admin/logout', {
     method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function createAdminProduct(token: string, product: AdminProductPayload) {
+  return request<{ product: Product }>('/api/admin/products', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify(product),
+  });
+}
+
+export function updateAdminProduct(token: string, productId: string, product: AdminProductPayload) {
+  return request<{ product: Product }>(`/api/admin/products/${encodeURIComponent(productId)}`, {
+    method: 'PUT',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify(product),
+  });
+}
+
+export function updateAdminProductStock(token: string, productId: string, stock: number) {
+  return request<{ product: Product }>(`/api/admin/products/${encodeURIComponent(productId)}/stock`, {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ stock }),
+  });
+}
+
+export function addAdminProductStock(token: string, productId: string, quantity: number) {
+  return request<{ product: Product }>(`/api/admin/products/${encodeURIComponent(productId)}/stock/add`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ quantity }),
+  });
+}
+
+export function deleteAdminProduct(token: string, productId: string) {
+  return request<{ ok: boolean; product: Product }>(`/api/admin/products/${encodeURIComponent(productId)}`, {
+    method: 'DELETE',
     headers: { Authorization: `Bearer ${token}` },
   });
 }
