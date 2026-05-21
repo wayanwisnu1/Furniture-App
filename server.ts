@@ -1,5 +1,6 @@
 import express from 'express';
 import { randomUUID } from 'node:crypto';
+import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createServer as createViteServer } from 'vite';
@@ -50,8 +51,9 @@ const port = Number(process.env.PORT || 3000);
 const isProduction = process.env.NODE_ENV === 'production';
 const adminEmail = process.env.ADMIN_EMAIL || 'admin@sofnu.com';
 const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
+const productsFile = path.join(__dirname, 'data', 'products.json');
 
-let products: Product[] = [
+const defaultProducts: Product[] = [
   {
     id: 'sakarias-lamp',
     name: 'Sakarias Lamp',
@@ -125,6 +127,8 @@ let products: Product[] = [
   },
 ];
 
+let products: Product[] = loadProducts();
+
 const carts = new Map<string, CartLine[]>();
 const contacts: Contact[] = [];
 const subscribers = new Set<string>();
@@ -132,6 +136,51 @@ const orders: Order[] = [];
 const adminSessions = new Set<string>();
 
 app.use(express.json({ limit: '15mb' }));
+
+function isProduct(value: unknown): value is Product {
+  const product = value as Product;
+
+  return (
+    Boolean(product) &&
+    typeof product.id === 'string' &&
+    typeof product.name === 'string' &&
+    typeof product.price === 'number' &&
+    typeof product.category === 'string' &&
+    typeof product.imageKey === 'string' &&
+    Array.isArray(product.colors) &&
+    product.colors.every((color) => typeof color === 'string') &&
+    typeof product.description === 'string' &&
+    typeof product.stock === 'number' &&
+    typeof product.rating === 'number' &&
+    (product.badge === undefined || typeof product.badge === 'string') &&
+    (product.imageUrl === undefined || typeof product.imageUrl === 'string')
+  );
+}
+
+function loadProducts() {
+  if (!fs.existsSync(productsFile)) {
+    return defaultProducts;
+  }
+
+  try {
+    const parsed = JSON.parse(fs.readFileSync(productsFile, 'utf8')) as unknown;
+
+    if (Array.isArray(parsed) && parsed.every(isProduct)) {
+      return parsed;
+    }
+
+    console.warn(`Product data in ${productsFile} is invalid. Using default products.`);
+  } catch (error) {
+    console.warn(`Unable to load ${productsFile}. Using default products.`, error);
+  }
+
+  return defaultProducts;
+}
+
+function saveProducts() {
+  fs.mkdirSync(path.dirname(productsFile), { recursive: true });
+  fs.writeFileSync(productsFile, JSON.stringify(products, null, 2));
+}
 
 function requireAdmin(req: express.Request, res: express.Response, next: express.NextFunction) {
   const header = req.headers.authorization || '';
@@ -367,6 +416,7 @@ app.post('/api/admin/products', requireAdmin, (req, res) => {
   }
 
   products.push(product);
+  saveProducts();
   res.status(201).json({ product });
 });
 
@@ -387,6 +437,7 @@ app.put('/api/admin/products/:id', requireAdmin, (req, res) => {
 
   products = products.map((item) => (item.id === current.id ? product : item));
   clampProductQuantityInCarts(product.id, product.stock);
+  saveProducts();
   res.json({ product });
 });
 
@@ -407,6 +458,7 @@ app.patch('/api/admin/products/:id/stock', requireAdmin, (req, res) => {
 
   product.stock = Math.floor(stock);
   clampProductQuantityInCarts(product.id, product.stock);
+  saveProducts();
   res.json({ product });
 });
 
@@ -426,6 +478,7 @@ app.post('/api/admin/products/:id/stock/add', requireAdmin, (req, res) => {
   }
 
   product.stock += Math.floor(quantity);
+  saveProducts();
   res.json({ product });
 });
 
@@ -439,6 +492,7 @@ app.delete('/api/admin/products/:id', requireAdmin, (req, res) => {
 
   products = products.filter((item) => item.id !== product.id);
   removeProductFromCarts(product.id);
+  saveProducts();
   res.json({ ok: true, product });
 });
 

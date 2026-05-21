@@ -49,6 +49,27 @@ function formatDate(value: string) {
   }).format(new Date(value));
 }
 
+function stockStatus(stock: number) {
+  if (stock <= 0) {
+    return {
+      label: 'Habis',
+      className: 'bg-red-500/15 text-red-100',
+    };
+  }
+
+  if (stock <= 10) {
+    return {
+      label: 'Low stock',
+      className: 'bg-amber-400/15 text-amber-100',
+    };
+  }
+
+  return {
+    label: 'Ready',
+    className: 'bg-emerald-400/15 text-emerald-100',
+  };
+}
+
 function formFromProduct(product: Product): ProductForm {
   return {
     name: product.name,
@@ -771,8 +792,8 @@ export default function AdminDashboard({ onBack }: AdminDashboardProps) {
                         </td>
                         <td className="px-5 py-4 text-white/60">{formatPrice(product.price * product.stock)}</td>
                         <td className="px-5 py-4">
-                          <span className={`px-2 py-1 text-xs ${product.stock <= 10 ? 'bg-amber-400/15 text-amber-100' : 'bg-emerald-400/15 text-emerald-100'}`}>
-                            {product.stock <= 10 ? 'Low stock' : 'Ready'}
+                          <span className={`px-2 py-1 text-xs ${stockStatus(product.stock).className}`}>
+                            {stockStatus(product.stock).label}
                           </span>
                         </td>
                         <td className="px-5 py-4">
